@@ -9,3 +9,5 @@ DG-01: "DG-01, ISS, request docking"
 ISS: "Frequency 123.456 MHz"
 
 ...
+
+The "voices" can be supplied by any user who likes to have another "voice". A nice exmaple is the  "CW" voice, that just transmitts in morse code ;)
