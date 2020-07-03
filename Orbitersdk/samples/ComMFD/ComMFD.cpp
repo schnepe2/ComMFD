@@ -178,7 +178,7 @@ void ComMFD::InitVoices()
 	{
 		// [[WIN32]]
 		WIN32_FIND_DATA fileData;
-		HANDLE hFile = FindFirstFile("./Sound/ComMFD/*", &fileData);
+		HANDLE hFile = FindFirstFile("./Sound/_CustomVesselsSounds/ComMFD/*", &fileData);
 		if (hFile != INVALID_HANDLE_VALUE) {
 			do {
 				if (fileData.cFileName[0] != '.') { // skip ".", ".." and hidden directories (like ".svn")
@@ -190,7 +190,7 @@ void ComMFD::InitVoices()
 		}
 
 		// [[c++17]]
-		//std::string path = "./Sound/ComMFD";
+		//std::string path = "./Sound/_CustomVesselsSounds/ComMFD";
 		//for (const auto & entry : fs::directory_iterator(path)) {
 		//	if (is_directory(entry)) {
 		//		voices.push_back( entry.path().filename().string() );
@@ -334,7 +334,7 @@ bool ComMFD::AddTokenFileToPath (std::string& path, std::string& token)
 void ComMFD::SetVoiceIndex (size_t index)
 {
 	voice = index % voices.size();
-	voicePath = "Sound\\ComMFD\\" + voices[voice] + "\\";
+	voicePath = "Sound\\_CustomVesselsSounds\\ComMFD\\" + voices[voice] + "\\";
 }
 
 bool ComMFD::Update (oapi::Sketchpad *skp)
@@ -384,7 +384,7 @@ bool ComMFD::Read ()
 	if (!queue.empty() && !IsMFDWavePlaying(orbiterSoundId, wavNumber))
 	{
 		InvalidateDisplay();
-		std::string filePath(voicePath); // "Sound\\ComMFD\\[icao|en|en-femle|...]\\"
+		std::string filePath(voicePath); // "Sound\\_CustomVesselsSounds\\ComMFD\\[icao|en|en-femle|...]\\"
 
 		if (AddTokenFileToPath(filePath, queue.front())) {
 			focusFailError = !RequestLoadAndPlayVesselWave(orbiterSoundId, wavNumber, &filePath[0], pitch);
