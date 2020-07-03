@@ -30,6 +30,14 @@ private:
 	std::vector<std::string> queue;  ///< queue with tokens (left) to be played
 	std::vector<std::string> tokens; ///< all tokens (for display)
 
+	// --- Work-around for missing IsPlaying function ---
+	static double wav_endt;     ///< End time of current playing wave
+	static int    wav_number;   ///< Current playing wave number
+	static bool   IsMFDWavePlaying (int MyID, int WavNumber);
+	static bool   RequestLoadAndPlayVesselWave (int MyID, int WavNumber, char *SoundName, int Pitch);
+	static void   SetWavePlaying (int MyID, int WavNumber, const char *SoundName);
+	// --------------------------------------------------
+
 	VESSEL* pVessel;        ///< Vessel this MFD is in
 	int     key;            ///< mfd ID given at MsgProc(OAPI_MSG_MFD_OPENEDEX,...)
 	int     wavNumber;      ///< wave number used by this MFD instance

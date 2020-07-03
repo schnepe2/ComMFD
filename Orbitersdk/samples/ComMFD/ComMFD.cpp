@@ -20,7 +20,7 @@
 
 #include "orbitersdk.h"
 #include "ComMFD.h"
-#include "OrbiterSoundSDK40.h"
+#include "MfdSoundSDK40.h"
 
 
 const int WAVE_INDEX_MAX = 4;
@@ -129,7 +129,7 @@ ComMFD::ComMFD (DWORD w, DWORD h, VESSEL *vessel, int key) :
 	pitch         (100),
 	voice         (0),
 	focusFailError(false),
-	orbiterSoundId(ConnectToOrbiterSoundDLL(vessel->GetHandle()))
+	orbiterSoundId(ConnectMFDToOrbiterSound("ComMFD(Kuddel)"))
 {
 	InitVoices();
 	SetVoiceIndex(voice); // initializes voicePath
@@ -152,6 +152,8 @@ ComMFD::~ComMFD ()
 
 std::map<int,ComMFD*> ComMFD::Instances;
 std::vector<std::string> ComMFD::voices; // { "cw", "icao", "en", "en-female" }
+double ComMFD::wav_endt = -1; // End time of current playing wave
+int ComMFD::wav_number = -1;  // Current playing wave number
 
 // round robin instance getter
 ComMFD* ComMFD::GetInstance ()
@@ -379,16 +381,13 @@ bool ComMFD::Update (oapi::Sketchpad *skp)
 
 bool ComMFD::Read ()
 {
-	if (!queue.empty() && !IsPlaying(orbiterSoundId, wavNumber))
+	if (!queue.empty() && !IsMFDWavePlaying(orbiterSoundId, wavNumber))
 	{
 		InvalidateDisplay();
 		std::string filePath(voicePath); // "Sound\\ComMFD\\[icao|en|en-femle|...]\\"
 
 		if (AddTokenFileToPath(filePath, queue.front())) {
-			auto a = RequestLoadVesselWave(orbiterSoundId, wavNumber, &filePath[0], INTERNAL_ONLY);
-			auto b = PlayVesselWave(orbiterSoundId, wavNumber, NOLOOP, 255, int(pitch * 11025 / 100) );
-			// We have to *change* focus... but from what vessel? and back...
-			focusFailError = (!a || !b);
+			focusFailError = !RequestLoadAndPlayVesselWave(orbiterSoundId, wavNumber, &filePath[0], pitch);
 		}
 		queue.erase(queue.begin());
 	}
@@ -460,3 +459,62 @@ bool ComMFD::SetText (const char *txt)
 
 	return !tokens.empty();
 }
+
+
+// ==============================================================
+// Work-around for missing IsPlaying function
+// in "MfdSoundSDK40.h"
+//
+
+// Try to get duration (in seconds) from file
+double GetWaveDuration(const char *SoundName) {
+	FILE *fp;
+	double duration = 1.0; // [s] fallback value: one second
+
+	if (fopen_s(&fp, SoundName, "r") == 0) {
+		struct header_t {
+			char     chunk_id[4];     // "RIFF"
+			uint32_t chunk_size;
+			char     format[4];       // "WAVE"
+			char     subchunk1_id[4]; // "fmt "
+			uint32_t subchunk1_size;
+			uint16_t audio_format;    // 1 => PCM
+			uint16_t num_channels;
+			uint32_t sample_rate;
+			uint32_t byte_rate;
+			uint16_t block_align;     //  1 => 8-bit mono, 2 => 8-bit stereo or 16-bit mono, 4 => 16-bit stereo
+			uint16_t bits_per_sample;
+			char     subchunk2_id[4]; // "data"
+			uint32_t subchunk2_size;
+		} hdr;
+
+		fread_s(&hdr, sizeof(hdr), 1, sizeof(header_t), fp);
+		fclose(fp);
+
+		uint32_t numSamples = hdr.subchunk2_size /
+			(hdr.num_channels * (hdr.bits_per_sample / 8));
+		duration = (double)numSamples / hdr.sample_rate;
+	}
+	return duration;
+}
+
+bool ComMFD::IsMFDWavePlaying (int MyID, int WavNumber) {
+	return wav_number == WavNumber && wav_endt > oapiGetSimTime();
+}
+
+void ComMFD::SetWavePlaying (int MyID, int WavNumber, const char *SoundName) {
+	wav_number = WavNumber;
+	wav_endt = oapiGetSimTime() + GetWaveDuration(SoundName);
+}
+
+bool ComMFD::RequestLoadAndPlayVesselWave (int MyID, int WavNumber, char *SoundName, int Pitch)
+{
+	if (LoadMFDWave(MyID, WavNumber, SoundName)) {
+		if (PlayMFDWave(MyID, WavNumber, NOLOOP, 255, int(Pitch * 11025 / 100))) {
+			SetWavePlaying(MyID, WavNumber, SoundName);
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+// ==============================================================
