@@ -20,6 +20,8 @@
 
 #include "orbitersdk.h"
 #include "ComMFD.h"
+
+#include "XRSound.h"
 #include "MfdSoundSDK40.h"
 
 
@@ -129,8 +131,16 @@ ComMFD::ComMFD (DWORD w, DWORD h, VESSEL *vessel, int key) :
 	pitch         (100),
 	voice         (0),
 	focusFailError(false),
-	orbiterSoundId(ConnectMFDToOrbiterSound("ComMFD(Kuddel)"))
+	orbiterSoundId(ConnectMFDToOrbiterSound("ComMFD(Kuddel)")),
+	pXRSound      (nullptr)
 {
+	//pXRSound = XRSound::CreateInstance(vessel);
+	pXRSound = XRSound::CreateInstance("ComMFD(Kuddel)");
+	if (!pXRSound->IsPresent()) {
+		delete pXRSound;
+		pXRSound = nullptr;
+	}
+
 	InitVoices();
 	SetVoiceIndex(voice); // initializes voicePath
 }
@@ -143,6 +153,9 @@ ComMFD::~ComMFD ()
 	}
 	if (!tokens.empty()) {
 		tokens.erase( std::begin(tokens), std::end(tokens) );
+	}
+	if (pXRSound) {
+		delete pXRSound;
 	}
 }
 
@@ -279,6 +292,7 @@ bool ComMFD::ConsumeKeyBuffered (DWORD key)
 
 	case OAPI_KEY_N:
 		SetVoiceIndex(voice + 1);
+		InvalidateDisplay();
 		return true;
 	}
 	return false;
@@ -352,12 +366,12 @@ bool ComMFD::Update (oapi::Sketchpad *skp)
 	}
 
 	// Current pitch
-	std::ostringstream ss;
-	ss << pitch << "%";
-	skp->Text( GetWidth() - skp->GetTextWidth(ss.str().c_str()) - 5,
+	std::string buffer;
+	std::sprintf(&buffer[0], "%d%%", pitch);
+	skp->Text( GetWidth() - skp->GetTextWidth(buffer.c_str()) - 5,
 	           ceil(GetHeight() * 2 / 7),
-			   ss.str().c_str(),
-			   ss.str().length() );
+	           buffer.c_str(),
+	           buffer.length() );
 
 	// Current voice
 	auto txt = voices[voice].c_str();
@@ -365,6 +379,15 @@ bool ComMFD::Update (oapi::Sketchpad *skp)
 	           ceil(GetHeight() * 4 / 7),
 	           txt,
 	           voices[voice].length() );
+
+	// Used Sound API
+	std::sprintf(&buffer[0], "%s (v%.1f)",
+		(pXRSound) ? "XRSound" : "OrbiterSound",
+		(pXRSound) ? pXRSound->GetVersion() : GetUserOrbiterSoundVer()
+	);
+	auto x = (GetWidth() - skp->GetTextWidth(buffer.c_str(), buffer.length())) / 2;
+	auto y = GetHeight() - LOWORD(skp->GetCharSize());
+	skp->Text(x, y, buffer.c_str(), buffer.length());
 
 	// Focus fail error message
 	if (focusFailError)
@@ -499,7 +522,9 @@ double GetWaveDuration(const char *SoundName) {
 }
 
 bool ComMFD::IsMFDWavePlaying (int MyID, int WavNumber) {
-	return wav_number == WavNumber && wav_endt > oapiGetSimTime();
+	return (pXRSound)
+	     ? pXRSound->IsWavPlaying(WavNumber)
+	     : (wav_number == WavNumber && wav_endt > oapiGetSimTime());
 }
 
 void ComMFD::SetWavePlaying (int MyID, int WavNumber, const char *SoundName) {
@@ -509,12 +534,19 @@ void ComMFD::SetWavePlaying (int MyID, int WavNumber, const char *SoundName) {
 
 bool ComMFD::RequestLoadAndPlayVesselWave (int MyID, int WavNumber, char *SoundName, int Pitch)
 {
+	if (pXRSound) {
+		if (pXRSound->LoadWav(WavNumber, SoundName, XRSound::PlaybackType::Radio)) {
+			return pXRSound->PlayWav(WavNumber, false, 1.0);
+		}
+		return false;
+	}
+
 	if (LoadMFDWave(MyID, WavNumber, SoundName)) {
 		if (PlayMFDWave(MyID, WavNumber, NOLOOP, 255, int(Pitch * 11025 / 100))) {
 			SetWavePlaying(MyID, WavNumber, SoundName);
-			return TRUE;
+			return true;
 		}
 	}
-	return FALSE;
+	return false;
 }
 // ==============================================================

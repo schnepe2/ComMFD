@@ -5,6 +5,7 @@
 #include <map>
 #include <string>
 
+class XRSound;
 
 class ComMFD: public MFD2 {
 public:
@@ -33,10 +34,10 @@ private:
 	// --- Work-around for missing IsPlaying function ---
 	static double wav_endt;     ///< End time of current playing wave
 	static int    wav_number;   ///< Current playing wave number
-	static bool   IsMFDWavePlaying (int MyID, int WavNumber);
-	static bool   RequestLoadAndPlayVesselWave (int MyID, int WavNumber, char *SoundName, int Pitch);
 	static void   SetWavePlaying (int MyID, int WavNumber, const char *SoundName);
 	// --------------------------------------------------
+	bool    IsMFDWavePlaying (int MyID, int WavNumber);
+	bool    RequestLoadAndPlayVesselWave (int MyID, int WavNumber, char *SoundName, int Pitch);
 
 	VESSEL* pVessel;        ///< Vessel this MFD is in
 	int     key;            ///< mfd ID given at MsgProc(OAPI_MSG_MFD_OPENEDEX,...)
@@ -46,6 +47,7 @@ private:
 	size_t  voice;          ///< current used voice (index ito voices)
 	std::string  voicePath; ///< base path for current voice
 	bool    focusFailError; ///< indicates that a focus-change might fix an issue
+	XRSound *pXRSound;      ///< XRSound instance (nullptr if OrbiterSound is used)
 
 	void SetVoiceIndex (size_t voice);
 	bool AddTokenFileToPath (std::string& path, std::string& token);
