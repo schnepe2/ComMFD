@@ -22,6 +22,7 @@
 #include "ComMFD.h"
 
 #include "XRSound.h"
+// #include "OrbiterSoundSDK40.h" // see "Work-around" notice further down
 #include "MfdSoundSDK40.h"
 
 
@@ -134,8 +135,7 @@ ComMFD::ComMFD (DWORD w, DWORD h, VESSEL *vessel, int key) :
 	orbiterSoundId(ConnectMFDToOrbiterSound("ComMFD(Kuddel)")),
 	pXRSound      (nullptr)
 {
-	//pXRSound = XRSound::CreateInstance(vessel);
-	pXRSound = XRSound::CreateInstance("ComMFD(Kuddel)");
+	pXRSound = XRSound::CreateInstance(vessel);
 	if (!pXRSound->IsPresent()) {
 		delete pXRSound;
 		pXRSound = nullptr;
@@ -487,6 +487,17 @@ bool ComMFD::SetText (const char *txt)
 // ==============================================================
 // Work-around for missing IsPlaying function
 // in "MfdSoundSDK40.h"
+//
+// We *could* use IsPlaying(int,int) from "OrbiterSoundSDK40.h" however.
+// Just include the additional header (see top of file) and use that
+// // in method XXXX
+// #include "OrbiterSoundSDK40.h"
+//
+// bool ComMFD::IsMFDWavePlaying(int MyID, int WavNumber) {
+// 	return (pXRSound)
+// 		? pXRSound->IsWavPlaying(WavNumber)
+// 		: IsPlaying(MyID, WavNumber);
+// }
 //
 
 // Try to get duration (in seconds) from file
