@@ -106,7 +106,7 @@ int wordWrap ( const std::string& inputString,
 		iss >> word;
 
 		if ( line.length() + word.length() > lineLength ) {
-			outputString.push_back(line);
+			outputString.emplace_back(line);
 			line.clear();
 			++lines;
 		}
@@ -115,7 +115,7 @@ int wordWrap ( const std::string& inputString,
 	} while (iss);
 
 	if ( !line.empty() ) {
-		outputString.push_back(line);
+		outputString.emplace_back(line);
 	}
 
 	return lines;
@@ -195,7 +195,7 @@ void ComMFD::InitVoices()
 		if (hFile != INVALID_HANDLE_VALUE) {
 			do {
 				if (fileData.cFileName[0] != '.') { // skip ".", ".." and hidden directories (like ".svn")
-					voices.push_back(fileData.cFileName);
+					voices.emplace_back(fileData.cFileName);
 				}
 			} while (FindNextFile(hFile, &fileData));
 
@@ -206,7 +206,7 @@ void ComMFD::InitVoices()
 		//std::string path = "./Sound/_CustomVesselsSounds/ComMFD";
 		//for (const auto & entry : fs::directory_iterator(path)) {
 		//	if (is_directory(entry)) {
-		//		voices.push_back( entry.path().filename().string() );
+		//		voices.emplace_back( entry.path().filename().string() );
 		//	}
 		//}
 	}
@@ -441,7 +441,7 @@ bool ComMFD::SetText (const char *txt)
 			for (auto ci = commands.begin(); ci != commands.end(); ++ci) {
 				std::size_t found = src.find(*ci, i);
 				if (found == i) { // (found != std::string::npos && found == i)
-					tokens.push_back(*ci);
+					tokens.emplace_back(*ci);
 					i += (*ci).length() - 1; // one less 'cause ++i in for-loop increment part!
 					cmdFound = true;
 					break;
@@ -453,13 +453,13 @@ bool ComMFD::SetText (const char *txt)
 			if (isspace(src[i], loc)) {
 				char prev = tokens.empty() ? 0 : tokens.back()[0];
 				if (prev != ' ' && prev != '_') {
-					tokens.push_back(" ");
+					tokens.emplace_back(" ");
 				}
 			}
 			else if (isalnum(src[i], loc) || src[i] == '.') {
-				tokens.push_back( std::string(sizeof(char), src[i]) );
+				tokens.emplace_back( std::string(sizeof(char), src[i]) );
 			} else {
-				tokens.push_back("_");
+				tokens.emplace_back("_");
 			}
 		}
 	}
@@ -474,7 +474,7 @@ bool ComMFD::SetText (const char *txt)
 
 	// Add one 'space'. Helps display the last token ab[c] during play
 	if (!tokens.empty()) {
-		tokens.push_back("\t");
+		tokens.emplace_back("\t");
 	}
 
 	// Copy to string display member
